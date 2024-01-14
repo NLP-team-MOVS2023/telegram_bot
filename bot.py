@@ -26,7 +26,7 @@ except:
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(bot=bot)
 
-WEBHOOK_HOST = 'https://ml-telegram-bot.onrender.com'
+WEBHOOK_HOST = 'https://nlp-team-ml-bot.onrender.com'
 WEBHOOK_PATH = f'/webhook/{BOT_TOKEN}'
 WEBHOOK_URL = f'{WEBHOOK_HOST}{WEBHOOK_PATH}'
 
