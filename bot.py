@@ -82,9 +82,9 @@ async def cmd_start(message: types.Message):
         'Также все действия выше могут быть вызваны соответствующими кнопками.\n'
         'Если хотите снова увидеть стартовое меню кнопок, напишите /start.\n'
         '\n'
-        '(**ВАЖНО!** Иногда бот не может обработать .csv, созданные в Excel, поэтому лучше создавать данные для '
+        '(*ВАЖНО!* Иногда бот не может обработать .csv, созданные в Excel, поэтому лучше создавать данные для '
         'тестирования в текстовых редакторах (пример данных для тестирования [здесь]('
-        'https://github.com/NLP-team-MOVS2023/nlp_project_MOVS/blob/main/sample_data_for_testing.csv). Мы работаем '
+        'https://github.com/NLP-team-MOVS2023/nlp_project_MOVS/blob/main/sample_data_for_testing.csv)). Мы работаем '
         'над этой проблемой.',
         reply_markup=builder.as_markup(resize_keyboard=True), parse_mode=ParseMode.MARKDOWN)
 
@@ -106,11 +106,11 @@ async def cmd_predict(message: types.Message):
     )
 
 
-# @dp.message(F.text.lower() == 'a')
-# async def not_allowed(message: types.Message):
-#     await message.answer(
-#         "Бот Вас не понял :) Пожалуйста, воспользуйтесь предложенными функциями бота."
-#     )
+@dp.message(F.text.lower() == 'a')
+async def not_allowed(message: types.Message):
+    await message.answer(
+        "Бот Вас не понял :) Пожалуйста, воспользуйтесь предложенными функциями бота."
+    )
 
 
 @dp.message(F.document)
