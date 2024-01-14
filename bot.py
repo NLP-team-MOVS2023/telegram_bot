@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 import time
@@ -13,7 +12,6 @@ from magic_filter import F
 from typing import Optional
 from aiogram.filters.callback_data import CallbackData
 from aiogram.enums import ParseMode
-from aiogram import html
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 
 from config_reader import config
@@ -64,20 +62,19 @@ async def cmd_start(message: types.Message):
         text="Вывести статистику по сервису")
     )
     await message.answer(
-        "Этот бот создан в рамках годового проекта по извлечению деталей из текста в магистратуре МОВС.\n" \
-        'чтобы узнать, какие функции имеет бот, напишите /help\n' \
+        "Этот бот создан в рамках годового проекта по извлечению деталей из текста в магистратуре МОВС.\n"
+        'чтобы узнать, какие функции имеет бот, напишите /help\n'
         'если хотите снова увидеть стартовое меню кнопок, напишите /start\n',
         'чтобы оценить работу бота, напишите /feedback\n',
         'чтобы вывести статистику оценок, напишите /rating\n',
         reply_markup=builder.as_markup(resize_keyboard=True))
 
 
-
 @dp.message(Command("help"))
 @dp.message(F.text.lower() == "как пользоваться этим сервисом")
 async def cmd_special_buttons(message: types.Message):
     text = 'Данный бот умеет делать предсказания о предикатном отношении между двумя сущностями (например, предикатом будет __on__ для сущностей ___book___ и ___table___).\n' \
-    'Чтобы сделать предсказания, необходимо загрузить файл формата .csv с колонками __objects__ и __subjects__.',
+           'Чтобы сделать предсказания, необходимо загрузить файл формата .csv с колонками __objects__ и __subjects__.',
     await message.answer(text, parse_mode=ParseMode.MARKDOWN)
 
 
