@@ -35,8 +35,8 @@ WEBHOOK_URL = f'{WEBHOOK_HOST}{WEBHOOK_PATH}'
 allowed_requests = ["Как пользоваться этим сервисом", "Сделать предсказание", "Оценить работу сервиса",
                     "Вывести статистику по сервису"]
 
-
 json_file = 'feedback_ratings.json'
+
 
 class NumbersCallbackFactory(CallbackData, prefix="fabnum"):
     action: str
@@ -46,6 +46,7 @@ class NumbersCallbackFactory(CallbackData, prefix="fabnum"):
 class PredictorsCallbackFactory(CallbackData, prefix="fabpred"):
     action: str
     value: Optional[int] = None
+
 
 try:
     with open(json_file, 'r') as file:
@@ -79,8 +80,13 @@ async def cmd_start(message: types.Message):
         'Чтобы оценить работу бота, напишите /feedback\n'
         'Чтобы вывести статистику оценок, напишите /rating\n'
         'Также все действия выше могут быть вызваны соответствующими кнопками.\n'
-        'Если хотите снова увидеть стартовое меню кнопок, напишите /start\n',
-        reply_markup=builder.as_markup(resize_keyboard=True))
+        'Если хотите снова увидеть стартовое меню кнопок, напишите /start.\n'
+        '\n'
+        '(**ВАЖНО!** Иногда бот не может обработать .csv, созданные в Excel, поэтому лучше создавать данные для '
+        'тестирования в текстовых редакторах (пример данных для тестирования [здесь]('
+        'https://github.com/NLP-team-MOVS2023/nlp_project_MOVS/blob/main/sample_data_for_testing.csv). Мы работаем '
+        'над этой проблемой.',
+        reply_markup=builder.as_markup(resize_keyboard=True), parse_mode=ParseMode.MARKDOWN)
 
 
 @dp.message(Command("help"))
