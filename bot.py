@@ -1,20 +1,29 @@
+import io
 import json
 import logging
 import time
 import os
-import pandas as pd
+from typing import Optional
 
+import pandas as pd
+import requests
+import ast
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters.command import Command
+from aiogram.types import BufferedInputFile
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
-from aiohttp import web
-from magic_filter import F
-from typing import Optional
+from aiogram import F
 from aiogram.filters.callback_data import CallbackData
 from aiogram.enums import ParseMode
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
+from aiohttp import web
 
-BOT_TOKEN = os.getenv('BOT_TOKEN')
+from config_reader import config
+
+try:
+    BOT_TOKEN = config.bot_token.get_secret_value()
+except:
+    BOT_TOKEN = os.getenv('BOT_TOKEN')
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(bot=bot)
@@ -23,13 +32,20 @@ WEBHOOK_HOST = 'https://nlp-team-ml-bot.onrender.com'
 WEBHOOK_PATH = f'/webhook/{BOT_TOKEN}'
 WEBHOOK_URL = f'{WEBHOOK_HOST}{WEBHOOK_PATH}'
 
+allowed_requests = ["Как пользоваться этим сервисом", "Сделать предсказание", "Оценить работу сервиса",
+                    "Вывести статистику по сервису"]
+
+
+json_file = 'feedback_ratings.json'
 
 class NumbersCallbackFactory(CallbackData, prefix="fabnum"):
     action: str
     value: Optional[int] = None
 
 
-json_file = 'feedback_ratings.json'
+class PredictorsCallbackFactory(CallbackData, prefix="fabpred"):
+    action: str
+    value: Optional[int] = None
 
 try:
     with open(json_file, 'r') as file:
@@ -45,10 +61,10 @@ async def cmd_start(message: types.Message):
         feedback_ratings[user_id] = {}
     builder = ReplyKeyboardBuilder()
     builder.row(
-        types.KeyboardButton(text="Как пользоваться этим сервисом"),
+        types.KeyboardButton(text=allowed_requests[0]),
     )
     builder.row(
-        types.KeyboardButton(text="Сделать предсказание"),
+        types.KeyboardButton(text=allowed_requests[1]),
     )
     builder.row(types.KeyboardButton(
         text="Оценить работу сервиса")
@@ -58,55 +74,61 @@ async def cmd_start(message: types.Message):
     )
     await message.answer(
         "Этот бот создан в рамках годового проекта по извлечению деталей из текста в магистратуре МОВС.\n"
-        'чтобы узнать, какие функции имеет бот, напишите /help\n'
-        'если хотите снова увидеть стартовое меню кнопок, напишите /start\n',
-        'чтобы оценить работу бота, напишите /feedback\n',
-        'чтобы вывести статистику оценок, напишите /rating\n',
+        'Чтобы узнать, какие функции имеет бот, напишите /help\n'
+        'Чтобы сделать предсказание, напишите /predict\n'
+        'Чтобы оценить работу бота, напишите /feedback\n'
+        'Чтобы вывести статистику оценок, напишите /rating\n'
+        'Также все действия выше могут быть вызваны соответствующими кнопками.\n'
+        'Если хотите снова увидеть стартовое меню кнопок, напишите /start\n',
         reply_markup=builder.as_markup(resize_keyboard=True))
 
 
 @dp.message(Command("help"))
-@dp.message(F.text.lower() == "как пользоваться этим сервисом")
-async def cmd_special_buttons(message: types.Message):
-    text = 'Данный бот умеет делать предсказания о предикатном отношении между двумя сущностями (например, предикатом будет __on__ для сущностей ___book___ и ___table___).\n' \
-           'Чтобы сделать предсказания, необходимо загрузить файл формата .csv с колонками __objects__ и __subjects__.',
+@dp.message(F.text.lower() == allowed_requests[0].lower())
+async def cmd_help(message: types.Message):
+    text = 'Данный бот умеет делать предсказания о предикатном отношении между двумя сущностями (например, предикатом ' \
+           'для сущностей _book_ и _table_ будет _on_).\n' \
+           'Чтобы сделать предсказания, необходимо загрузить файл формата .csv с колонками _objects_ и _subjects_.'
     await message.answer(text, parse_mode=ParseMode.MARKDOWN)
 
 
-@dp.message(F.text.lower() == "сделать предсказание")
-async def user_experiense(message: types.Message):
+@dp.message(Command("predict"))
+@dp.message(F.text.lower() == allowed_requests[1].lower())
+async def cmd_predict(message: types.Message):
     await message.answer(
-        "Пожалуйста, загрузите файл формата .csv с колонками __objects__ и __subjects__.",
+        "Пожалуйста, загрузите файл формата .csv с колонками _objects_ и _subjects_.", parse_mode=ParseMode.MARKDOWN
     )
 
 
+# @dp.message(F.text.lower() == 'a')
+# async def not_allowed(message: types.Message):
+#     await message.answer(
+#         "Бот Вас не понял :) Пожалуйста, воспользуйтесь предложенными функциями бота."
+#     )
+
+
 @dp.message(F.document)
-async def handle_file(message: types.Message):
+async def make_predictions(message: types.Message):
+    response = None
     if message.document.mime_type == 'text/csv':
         file_bytes = await bot.download(message.document)
-
-        # Read CSV file using pandas
         df = pd.read_csv(file_bytes)
         try:
-            pass
-            # item = prepare_data(df)
-            # pred = predict(item)
+            response = requests.post('https://nlp-project-movs.onrender.com/predict', json=df.to_dict(orient='list'))
         except:
             await message.answer("Пожалуйста, приложите файл необходимого формата")
-
-        # if len(df) == 1:
-        #     result_message = f"Предсказанная стоимость автомобиля {df['name'].values[0]}: {pred[0]:0.0f} руб."
-        # elif len(df) > 1:
-        #     result_message = 'Предсказанные стоимости автомобилей:\n'
-        #     for i in range(len(df)):
-        #         result_message += f"{df['name'].values[i]}: {pred[i]:0.0f} руб.\n"
-        await message.answer('TBA', parse_mode=ParseMode.MARKDOWN)
+    if response:
+        response_dict = ast.literal_eval(response.text)
+        response_df = pd.DataFrame(response_dict.values())
+        response_csv = response_df.to_csv(index=False)
+        predictions = BufferedInputFile(io.BytesIO(response_csv.encode()).getvalue(), filename="predictions.csv")
+        await bot.send_document(message.chat.id, predictions, caption="Полученные предсказания:")
     else:
         await message.answer("Пожалуйста, приложите файл необходимого формата")
 
 
 @dp.message(Command("feedback"))
-@dp.message(F.text.lower() == "оценить работу сервиса")
+@dp.message(F.text.lower() == allowed_requests[2].lower())
 async def feedback(message: types.Message):
     builder = InlineKeyboardBuilder()
     for i in range(1, 6):
@@ -136,7 +158,7 @@ async def callbacks_num_change_fab(callback: types.CallbackQuery, callback_data:
 
 
 @dp.message(Command("rating"))
-@dp.message(F.text.lower() == "вывести статистику по сервису")
+@dp.message(F.text.lower() == allowed_requests[3].lower())
 async def feedback_stats(message: types.Message):
     with open(json_file, 'r') as file:
         feedback_ratings = json.load(file)
