@@ -106,11 +106,11 @@ async def cmd_predict(message: types.Message):
     )
 
 
-@dp.message(F.text.lower() == 'a')
-async def not_allowed(message: types.Message):
-    await message.answer(
-        "Бот Вас не понял :) Пожалуйста, воспользуйтесь предложенными функциями бота."
-    )
+# @dp.message(F.text.lower() not in allowed_requests)
+# async def not_allowed(message: types.Message):
+#     await message.answer(
+#         "Бот Вас не понял :) Пожалуйста, воспользуйтесь предложенными функциями бота."
+#     )
 
 
 @dp.message(F.document)
@@ -119,10 +119,14 @@ async def make_predictions(message: types.Message):
     if message.document.mime_type == 'text/csv':
         file_bytes = await bot.download(message.document)
         df = pd.read_csv(file_bytes)
-        try:
-            response = requests.post('https://nlp-project-movs.onrender.com/predict', json=df.to_dict(orient='list'))
-        except:
-            await message.answer("Пожалуйста, приложите файл необходимого формата")
+        if 'subjects' not in df.columns or 'objects' not in df.columns or len(df.columns) != 2 or df['objects'].dtypes != 'object' or df['subjects'].dtypes != 'object' or df.isnull().values.any():
+            print('Неверный формат входных данных! Пожалуйста, нажмите /start и ознакомьтесь с примером данных для '
+                  'предсказаний.')
+        else:
+            try:
+                response = requests.post('https://nlp-project-movs.onrender.com/predict', json=df.to_dict(orient='list'))
+            except:
+                await message.answer("Пожалуйста, приложите файл необходимого формата")
     if response:
         response_dict = ast.literal_eval(response.text)
         response_df = pd.DataFrame(response_dict.values())
