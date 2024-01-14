@@ -2,25 +2,33 @@ import asyncio
 import json
 import logging
 import time
-
+import os
 import pandas as pd
 
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters.command import Command
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
+from aiohttp import web
 from magic_filter import F
 from typing import Optional
 from aiogram.filters.callback_data import CallbackData
 from aiogram.enums import ParseMode
 from aiogram import html
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 
 from config_reader import config
 
-logging.basicConfig(level=logging.INFO)
+try:
+    BOT_TOKEN = config.bot_token.get_secret_value()
+except:
+    BOT_TOKEN = os.getenv('BOT_TOKEN')
 
-bot = Bot(token=config.bot_token.get_secret_value())
+bot = Bot(token=BOT_TOKEN)
+dp = Dispatcher(bot=bot)
 
-dp = Dispatcher()
+WEBHOOK_HOST = 'https://ml-telegram-bot.onrender.com'
+WEBHOOK_PATH = f'/webhook/{BOT_TOKEN}'
+WEBHOOK_URL = f'{WEBHOOK_HOST}{WEBHOOK_PATH}'
 
 
 class NumbersCallbackFactory(CallbackData, prefix="fabnum"):
@@ -37,20 +45,11 @@ except FileNotFoundError:
     feedback_ratings = {}
 
 
-# ПОЛИНА: тут менять
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     user_id = message.from_user.id
-    print(feedback_ratings)
     if user_id not in feedback_ratings:
         feedback_ratings[user_id] = {}
-    await message.answer(
-        "Приветствую! Тут вы можете подать на вход несколько данных о пользователе и получить предсказание")
-
-
-# ПОЛИНА: тут менять
-@dp.message(Command("help"))
-async def cmd_special_buttons(message: types.Message):
     builder = ReplyKeyboardBuilder()
     builder.row(
         types.KeyboardButton(text="Как пользоваться этим сервисом"),
@@ -64,62 +63,57 @@ async def cmd_special_buttons(message: types.Message):
     builder.row(types.KeyboardButton(
         text="Вывести статистику по сервису")
     )
-
     await message.answer(
-        "Выберите действие:",
-        reply_markup=builder.as_markup(resize_keyboard=True),
-    )
+        "Этот бот создан в рамках годового проекта по извлечению деталей из текста в магистратуре МОВС.\n" \
+        'чтобы узнать, какие функции имеет бот, напишите /help\n' \
+        'если хотите снова увидеть стартовое меню кнопок, напишите /start\n',
+        'чтобы оценить работу бота, напишите /feedback\n',
+        'чтобы вывести статистику оценок, напишите /rating\n',
+        reply_markup=builder.as_markup(resize_keyboard=True))
 
 
-# ПОЛИНА: тут менять
+
+@dp.message(Command("help"))
 @dp.message(F.text.lower() == "как пользоваться этим сервисом")
-async def user_experiense(message: types.Message):
-    text = 'Данный бот умеет:\n' \
-           '• делать предсказания по одному экземпляру-автомобилю, шаблон высылается\n' \
-           '• делать предсказания по батчу автомобилей'
-
+async def cmd_special_buttons(message: types.Message):
+    text = 'Данный бот умеет делать предсказания о предикатном отношении между двумя сущностями (например, предикатом будет __on__ для сущностей ___book___ и ___table___).\n' \
+    'Чтобы сделать предсказания, необходимо загрузить файл формата .csv с колонками __objects__ и __subjects__.',
     await message.answer(text, parse_mode=ParseMode.MARKDOWN)
 
 
-# ПОЛИНА: тут менять (пока написать заглушкитипа coming soon)
 @dp.message(F.text.lower() == "сделать предсказание")
 async def user_experiense(message: types.Message):
     await message.answer(
-        "Предсказания для скольки автомобилей вы хотите сделать?",
+        "Пожалуйста, загрузите файл формата .csv с колонками __objects__ и __subjects__.",
     )
 
 
-# ПОЛИНА: тут менять
 @dp.message(F.document)
 async def handle_file(message: types.Message):
-    print(message.document)
     if message.document.mime_type == 'text/csv':
-        # file_id = message.document.file_id
-        # file_info = await bot.get_file(file_id)
         file_bytes = await bot.download(message.document)
 
         # Read CSV file using pandas
         df = pd.read_csv(file_bytes)
-        print(df)
+        try:
+            pass
+            # item = prepare_data(df)
+            # pred = predict(item)
+        except:
+            await message.answer("Пожалуйста, приложите файл необходимого формата")
 
-        # Make predictions using the ML model
-        # predictions = model.predict(df)
-
-        # Send the predictions back to the user
-        if len(df) == 1:
-            result_message = "Предсказанная стоимость автомобиля: 120 000 руб."# + str(predictions)
-            # await message.answer(result_message, parse_mode=ParseMode.MARKDOWN)
-        elif len(df) > 1:
-            result_message = 'Предсказанные стоимости автомобилей:'
-            for i in range(len(df)):
-                result_message += f"{i+1}: 120 000 руб.\n"
-        await message.answer(result_message, parse_mode=ParseMode.MARKDOWN)
+        # if len(df) == 1:
+        #     result_message = f"Предсказанная стоимость автомобиля {df['name'].values[0]}: {pred[0]:0.0f} руб."
+        # elif len(df) > 1:
+        #     result_message = 'Предсказанные стоимости автомобилей:\n'
+        #     for i in range(len(df)):
+        #         result_message += f"{df['name'].values[i]}: {pred[i]:0.0f} руб.\n"
+        await message.answer('TBA', parse_mode=ParseMode.MARKDOWN)
     else:
         await message.answer("Пожалуйста, приложите файл необходимого формата")
 
 
-
-
+@dp.message(Command("feedback"))
 @dp.message(F.text.lower() == "оценить работу сервиса")
 async def feedback(message: types.Message):
     builder = InlineKeyboardBuilder()
@@ -139,14 +133,17 @@ async def callbacks_num_change_fab(callback: types.CallbackQuery, callback_data:
     # print(callback.message)
     rating = callback_data.value
 
+    if user_id not in feedback_ratings:
+        feedback_ratings[user_id] = {}
+
     feedback_ratings[user_id][timestamp] = rating
 
-    # Save the feedback dictionary to the JSON file
     with open(json_file, 'w') as file:
         json.dump(feedback_ratings, file)
     await callback.message.answer("Благодарю за отзыв!")
 
 
+@dp.message(Command("rating"))
 @dp.message(F.text.lower() == "вывести статистику по сервису")
 async def feedback_stats(message: types.Message):
     with open(json_file, 'r') as file:
@@ -161,16 +158,31 @@ async def feedback_stats(message: types.Message):
             summ += int(j)
 
     users = set(users)
-    # val_rating = list(feedback_ratings.values())
-    # print(val_rating)
     await message.answer(
         f"Всего уникальных пользователей: {len(feedback_ratings.keys())}\nОценили сервис: {len(users)} юзеров\nСредняя оценка сервиса: {summ / n if n > 0 else 0:0.2f}",
     )
 
 
-async def main():
-    await dp.start_polling(bot)
+async def on_startup(bot: Bot) -> None:
+    await bot.set_webhook(url=WEBHOOK_URL)
+
+
+async def on_shutdown(dp):
+    await bot.delete_webhook()
+
+
+def main():
+    dp.startup.register(on_startup)
+    app = web.Application()
+    webhook_requests_handler = SimpleRequestHandler(
+        dispatcher=dp,
+        bot=bot,
+    )
+    webhook_requests_handler.register(app, path=WEBHOOK_PATH)
+    setup_application(app, dp, bot=bot)
+    web.run_app(app, host='0.0.0.0', port=10000)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    logging.basicConfig(level=logging.INFO)
+    main()
