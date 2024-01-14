@@ -14,12 +14,7 @@ from aiogram.filters.callback_data import CallbackData
 from aiogram.enums import ParseMode
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 
-from config_reader import config
-
-try:
-    BOT_TOKEN = config.bot_token.get_secret_value()
-except:
-    BOT_TOKEN = os.getenv('BOT_TOKEN')
+BOT_TOKEN = os.getenv('BOT_TOKEN')
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(bot=bot)
