@@ -170,8 +170,8 @@ async def callbacks_num_change_fab(callback: types.CallbackQuery, callback_data:
 @dp.message(Command("rating"))
 @dp.message(F.text.lower() == allowed_requests[3].lower())
 async def feedback_stats(message: types.Message):
-    with open(json_file, 'r') as file:
-        feedback_ratings = json.load(file)
+    # with open(json_file, 'r') as file:
+    #     feedback_ratings = json.load(file)
     n = 0
     summ = 0
     users = []
