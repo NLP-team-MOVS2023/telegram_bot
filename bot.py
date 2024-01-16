@@ -82,10 +82,8 @@ async def cmd_start(message: types.Message):
         'Также все действия выше могут быть вызваны соответствующими кнопками.\n'
         'Если хотите снова увидеть стартовое меню кнопок, напишите /start.\n'
         '\n'
-        '(*ВАЖНО!* Иногда бот не может обработать .csv, созданные в Excel, поэтому лучше создавать данные для '
-        'тестирования в текстовых редакторах (пример данных для тестирования [здесь]('
-        'https://github.com/NLP-team-MOVS2023/nlp_project_MOVS/blob/main/sample_data_for_testing.csv)). Мы работаем '
-        'над этой проблемой.',
+        'Пример данных для тестирования сервиса находится [здесь]('
+        'https://github.com/NLP-team-MOVS2023/nlp_project_MOVS/blob/main/sample_data_for_testing.csv).',
         reply_markup=builder.as_markup(resize_keyboard=True), parse_mode=ParseMode.MARKDOWN)
 
 
@@ -118,15 +116,11 @@ async def make_predictions(message: types.Message):
     response = None
     if message.document.mime_type == 'text/csv':
         file_bytes = await bot.download(message.document)
-        df = pd.read_csv(file_bytes)
-        if 'subjects' not in df.columns or 'objects' not in df.columns or len(df.columns) != 2 or df['objects'].dtypes != 'object' or df['subjects'].dtypes != 'object' or df.isnull().values.any():
-            print('Неверный формат входных данных! Пожалуйста, нажмите /start и ознакомьтесь с примером данных для '
-                  'предсказаний.')
-        else:
-            try:
-                response = requests.post('https://nlp-project-movs.onrender.com/predict', json=df.to_dict(orient='list'))
-            except:
-                await message.answer("Пожалуйста, приложите файл необходимого формата")
+        df = pd.read_csv(file_bytes, encoding='utf-8', sep=None)
+        try:
+            response = requests.post('https://nlp-project-movs.onrender.com/predict', json=df.to_dict(orient='list'))
+        except:
+            await message.answer("Произошла ошибка сервера. Пожалуйста, попробуйте позднее.")
     if response:
         response_dict = ast.literal_eval(response.text)
         response_df = pd.DataFrame(response_dict.values())
