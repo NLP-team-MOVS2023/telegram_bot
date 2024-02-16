@@ -95,14 +95,14 @@ def load_feedback_ratings():
 feedback_ratings = load_feedback_ratings()
 
 
-async def setup_bot_commands(
+def setup_bot_commands(
     bot: Bot,
 ) -> None:
     bot_commands = [
         BotCommand(command="/help", description="Как пользоваться?"),
         BotCommand(command="/start", description="Начать"),
     ]
-    await bot.set_my_commands(bot_commands)
+    bot.set_my_commands(bot_commands)
 
 
 @dp.message(Command("start"))
@@ -266,29 +266,25 @@ async def not_allowed(message: types.Message) -> None:
     await message.answer(message_texts.invalid_cmd)
 
 
-# async def on_startup(bot: Bot) -> None:
-#     await bot.set_webhook(url=WEBHOOK_URL)
+async def on_startup(bot: Bot) -> None:
+    await bot.set_webhook(url=WEBHOOK_URL)
 
 
-# async def on_shutdown(dp):
-#     await bot.delete_webhook()
+async def on_shutdown(dp):
+    await bot.delete_webhook()
 
 
-# def main():
-#     dp.startup.register(on_startup)
-#     app = web.Application()
-#     webhook_requests_handler = SimpleRequestHandler(
-#         dispatcher=dp,
-#         bot=bot,
-#     )
-#     webhook_requests_handler.register(app, path=WEBHOOK_PATH)
-#     setup_application(app, dp, bot=bot)
-#     web.run_app(app, host='0.0.0.0', port=10000)
-
-
-async def main():
-    await setup_bot_commands(bot)
-    await dp.start_polling(bot)
+def main():
+    setup_bot_commands(bot)
+    dp.startup.register(on_startup)
+    app = web.Application()
+    webhook_requests_handler = SimpleRequestHandler(
+        dispatcher=dp,
+        bot=bot,
+    )
+    webhook_requests_handler.register(app, path=WEBHOOK_PATH)
+    setup_application(app, dp, bot=bot)
+    web.run_app(app, host='0.0.0.0', port=10000)
 
 
 if __name__ == "__main__":
