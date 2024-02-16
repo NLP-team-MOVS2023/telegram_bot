@@ -161,7 +161,7 @@ async def make_predictions(
     if message.document.mime_type == "text/csv":
         await message.answer(message_texts.processing)
         file_bytes = await bot.download(message.document)
-        df = pd.read_csv(file_bytes)
+        df = pd.read_csv(file_bytes, encoding='utf-8', sep=None)
         try:
             response = requests.post(
                 "https://nlp-project-movs.onrender.com/predict",
@@ -180,7 +180,6 @@ async def make_predictions(
             )
         except HTTPError or ConnectionError:
             await message.answer(message_texts.connection_error)
-
     else:
         await message.answer(message_texts.invalid_format)
 
