@@ -83,6 +83,7 @@ class PredictorsCallbackFactory(CallbackData, prefix="fabpred"):
 
 
 def load_feedback_ratings():
+    """Feedback data loader"""
     try:
         with open(config.json_file, "r") as file:
             feedback_ratings = json.load(file)
@@ -98,6 +99,7 @@ feedback_ratings = load_feedback_ratings()
 def setup_bot_commands(
     bot: Bot,
 ) -> None:
+    """Setting default Bot commands for command menu"""
     bot_commands = [
         BotCommand(command="/help", description="Как пользоваться?"),
         BotCommand(command="/start", description="Начать"),
@@ -209,6 +211,7 @@ async def callbacks_num_change_fab(
     callback: types.CallbackQuery,
     callback_data: NumbersCallbackFactory,
 ) -> None:
+    """Handle callbacks from user"""
     user_id = callback.from_user.id
     timestamp = str(int(time.time()))
     logger.info(
@@ -228,7 +231,10 @@ async def callbacks_num_change_fab(
 
 @dp.message(Command("rating"))
 @dp.message(F.text.lower() == allowed_requests[3].lower())
-async def feedback_stats(message: types.Message) -> None:
+async def feedback_stats(
+    message: types.Message,
+) -> None:
+    """Handle command "rating" """
     try:
         with open(config.json_file, "r") as file:
             feedback_ratings = json.load(file)
@@ -259,7 +265,10 @@ async def feedback_stats(message: types.Message) -> None:
 
 
 @dp.message(F.text)
-async def not_allowed(message: types.Message) -> None:
+async def not_allowed(
+    message: types.Message,
+) -> None:
+    """Handle text not included in commands"""
     logger.info(
         f"Получено сообщение от пользователя {message.from_user.id}: {message.text}"
     )
