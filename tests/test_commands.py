@@ -19,7 +19,6 @@ from bot import feedback_ratings
 import message_texts
 from config_reader import config
 
-
 allowed_requests = [
     "Как пользоваться этим сервисом",
     "Сделать предсказание",
@@ -94,7 +93,6 @@ async def test_cmd_predict():
 @patch.object(bot.bot, "send_document")
 @patch.object(requests, "post")
 async def test_make_predictions(post, send_document, download):
-
     # кейс с неверным расширением
     message = AsyncMock()
     message.document.mime_type = "not valid"
@@ -198,7 +196,7 @@ async def test_feedback_stats_existent(full_json):
 
     message.answer.assert_called_with(
         message_texts.feedback_report.format(3, 2, 4.00)
-        )
+    )
 
 
 @pytest.mark.asyncio
