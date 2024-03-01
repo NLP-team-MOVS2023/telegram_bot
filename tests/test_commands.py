@@ -1,23 +1,20 @@
 import sys
 import json
 from typing import Optional
-
 import pytest
 from unittest.mock import patch, ANY, AsyncMock, call
-
 import requests
 from requests.exceptions import HTTPError
-
 from aiogram import types
 from aiogram.enums import ParseMode
 from aiogram.filters.callback_data import CallbackData
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
-
-sys.path.append("./")
 import bot
 from bot import feedback_ratings
 import message_texts
 from config_reader import config
+
+sys.path.append("./")
 
 allowed_requests = [
     "Как пользоваться этим сервисом",
@@ -25,6 +22,11 @@ allowed_requests = [
     "Оценить работу сервиса",
     "Вывести статистику по сервису",
 ]
+
+
+class NumbersCallbackFactory(CallbackData, prefix="fabnum"):
+    action: str
+    value: Optional[int] = None
 
 
 @patch("builtins.open")
@@ -48,7 +50,6 @@ def test_load_feedback_ratings_file(full_json):
 async def test_cmd_start(empty_json):
     message = AsyncMock()
     message.from_user.id = "1"
-
     builder = ReplyKeyboardBuilder()
     builder.row(
         types.KeyboardButton(text=allowed_requests[0]),
@@ -60,6 +61,7 @@ async def test_cmd_start(empty_json):
     builder.row(types.KeyboardButton(text=allowed_requests[3]))
 
     await bot.cmd_start(message)
+
     message.answer.assert_called_with(
         message_texts.start,
         reply_markup=builder.as_markup(resize_keyboard=True)
@@ -70,8 +72,8 @@ async def test_cmd_start(empty_json):
 @pytest.mark.asyncio
 async def test_cmd_help():
     message = AsyncMock()
-
     await bot.cmd_help(message)
+
     message.answer.assert_called_with(
         message_texts.help,
         parse_mode=ParseMode.MARKDOWN
@@ -81,8 +83,8 @@ async def test_cmd_help():
 @pytest.mark.asyncio
 async def test_cmd_predict():
     message = AsyncMock()
-
     await bot.cmd_predict(message)
+
     message.answer.assert_called_with(
         message_texts.predict, parse_mode=ParseMode.MARKDOWN
     )
@@ -96,19 +98,17 @@ async def test_make_predictions(post, send_document, download):
     # кейс с неверным расширением
     message = AsyncMock()
     message.document.mime_type = "not valid"
-
     await bot.make_predictions(message)
+
     message.answer.assert_called_with(message_texts.invalid_format)
 
     # кейс с верным расширением
     message = AsyncMock()
     message.document.mime_type = "text/csv"
     message.chat.id = "1"
-
     post.return_value.text = str({"1": "4"})
     post.return_value.status_code = 200
     post.return_value.raise_for_statue.side_effect = None
-
     await bot.make_predictions(message)
 
     message.answer.assert_called_with(message_texts.processing)
@@ -130,11 +130,9 @@ async def test_make_predictions_500(post, download):
     message = AsyncMock()
     message.document.mime_type = "text/csv"
     message.chat.id = "1"
-
     post.return_value.text = None
     post.return_value.status_code = 500
     post.return_value.raise_for_status.side_effect = HTTPError()
-
     await bot.make_predictions(message)
 
     download.assert_called_with(message.document)
@@ -144,16 +142,10 @@ async def test_make_predictions_500(post, download):
     )
 
 
-class NumbersCallbackFactory(CallbackData, prefix="fabnum"):
-    action: str
-    value: Optional[int] = None
-
-
 @pytest.mark.asyncio
 async def test_feedback():
     message = AsyncMock()
     message.from_user.id = "1"
-
     builder = InlineKeyboardBuilder()
     for i in range(1, 6):
         builder.button(
@@ -161,8 +153,8 @@ async def test_feedback():
             callback_data=NumbersCallbackFactory(action="feedback", value=i),
         )
     builder.adjust(5)
-
     await bot.feedback(message)
+
     message.answer.assert_called_with(
         message_texts.feedback,
         reply_markup=builder.as_markup(resize_keyboard=True)
@@ -177,13 +169,11 @@ async def test_callbacks_num_change_fab(time):
     callback.from_user.id = "1"
     callback_data = AsyncMock()
     callback_data = NumbersCallbackFactory(action="feedback", value=5)
-
     await bot.callbacks_num_change_fab(callback, callback_data)
 
     assert feedback_ratings["1"]["123456"] == 5
     with open(config.json_file, "rb") as f:
         res_json = json.load(f)
-
     assert res_json["1"]["123456"] == 5
     callback.message.answer.assert_called_with(message_texts.thanks)
 
@@ -191,7 +181,6 @@ async def test_callbacks_num_change_fab(time):
 @pytest.mark.asyncio
 async def test_feedback_stats_existent(full_json):
     message = AsyncMock()
-
     await bot.feedback_stats(message)
 
     message.answer.assert_called_with(
@@ -202,7 +191,6 @@ async def test_feedback_stats_existent(full_json):
 @pytest.mark.asyncio
 async def test_feedback_stats_nonexistent(empty_json):
     message = AsyncMock()
-
     await bot.feedback_stats(message)
 
     message.answer.assert_called_with(message_texts.no_feedback)
@@ -213,7 +201,6 @@ async def test_feedback_stats_nonexistent(empty_json):
 async def test_feedback_stats_nofile(open, empty_json):
     message = AsyncMock()
     open.side_effect = FileNotFoundError()
-
     await bot.feedback_stats(message)
 
     message.answer.assert_called_with(message_texts.no_feedback)
@@ -222,7 +209,6 @@ async def test_feedback_stats_nofile(open, empty_json):
 @pytest.mark.asyncio
 async def test_not_allowed():
     message = AsyncMock()
-
     await bot.not_allowed(message)
 
     message.answer.assert_called_with(message_texts.invalid_cmd)
