@@ -28,11 +28,13 @@ from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_applicati
 from config_reader import config
 import message_texts
 
+
 try:
     BOT_TOKEN = config.bot_token.get_secret_value()
 except Exception:
     load_dotenv()
     BOT_TOKEN = os.getenv("BOT_TOKEN")
+
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(bot=bot)
@@ -49,9 +51,18 @@ allowed_requests = [
 ]
 
 
+class NumbersCallbackFactory(CallbackData, prefix="fabnum"):
+    action: str
+    value: Optional[int] = None
+
+
+class PredictorsCallbackFactory(CallbackData, prefix="fabpred"):
+    action: str
+    value: Optional[int] = None
+
+
 def create_logger():
     """Logger initialization"""
-
     logger = logging.getLogger()
     if logger.hasHandlers():
         return logger
@@ -70,16 +81,6 @@ def create_logger():
 
 logger = create_logger()
 logger.info("Creating a logger for Main")
-
-
-class NumbersCallbackFactory(CallbackData, prefix="fabnum"):
-    action: str
-    value: Optional[int] = None
-
-
-class PredictorsCallbackFactory(CallbackData, prefix="fabpred"):
-    action: str
-    value: Optional[int] = None
 
 
 def load_feedback_ratings():
@@ -111,7 +112,7 @@ def setup_bot_commands(
 async def cmd_start(
     message: types.Message,
 ) -> None:
-    """Handle command "start" """
+    """Handle /start command"""
     user_id = message.from_user.id
     if user_id not in feedback_ratings:
         feedback_ratings[user_id] = {}
@@ -135,7 +136,7 @@ async def cmd_start(
 async def cmd_help(
     message: types.Message,
 ) -> None:
-    """Handle command "help" """
+    """Handle /help command"""
     await message.answer(
         message_texts.help,
         parse_mode=ParseMode.MARKDOWN,
@@ -147,7 +148,7 @@ async def cmd_help(
 async def cmd_predict(
     message: types.Message,
 ) -> None:
-    """Handle command "predict" """
+    """Handle /predict command"""
     await message.answer(
         message_texts.predict,
         parse_mode=ParseMode.MARKDOWN,
@@ -158,7 +159,7 @@ async def cmd_predict(
 async def make_predictions(
     message: types.Message,
 ) -> None:
-    """Handle document"""
+    """Handle input documents"""
     response = None
     if message.document.mime_type == "text/csv":
         await message.answer(message_texts.processing)
@@ -191,7 +192,7 @@ async def make_predictions(
 async def feedback(
     message: types.Message,
 ) -> None:
-    """Handle command "feedback" """
+    """Handle /feedback command"""
     builder = InlineKeyboardBuilder()
     for i in range(1, 6):
         builder.button(
@@ -214,7 +215,7 @@ async def callbacks_num_change_fab(
     user_id = callback.from_user.id
     timestamp = str(int(time.time()))
     logger.info(
-        "Recieved new callback from user {callback.from_user.id} - {callback.message}"
+        f"Recieved new callback from user {callback.from_user.id}: {callback.message}"
     )
     rating = callback_data.value
 
@@ -233,12 +234,11 @@ async def callbacks_num_change_fab(
 async def feedback_stats(
     message: types.Message,
 ) -> None:
-    """Handle command "rating" """
+    """Handle /rating command"""
     try:
         with open(config.json_file, "r") as file:
             feedback_ratings = json.load(file)
             if feedback_ratings:
-
                 n = 0
                 summ = 0
                 users = []
@@ -247,7 +247,6 @@ async def feedback_stats(
                         users.append(i)
                         n += 1
                         summ += int(j)
-
                 users = set(users)
                 await message.answer(
                     message_texts.feedback_report.format(
@@ -258,7 +257,6 @@ async def feedback_stats(
                 )
             else:
                 await message.answer(message_texts.no_feedback)
-
     except FileNotFoundError:
         await message.answer(message_texts.no_feedback)
 
